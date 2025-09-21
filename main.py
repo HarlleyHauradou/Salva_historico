@@ -149,6 +149,7 @@ def build_pdf(df: pd.DataFrame) -> bytes:
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.styles import ParagraphStyle
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4), rightMargin=18, leftMargin=18, topMargin=22, bottomMargin=18)
@@ -159,16 +160,22 @@ def build_pdf(df: pd.DataFrame) -> bytes:
     elems.append(Paragraph(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), styles["Normal"]))
     elems.append(Spacer(1, 6))
 
+    style = ParagraphStyle(
+        name="Normal8",
+        fontSize=8,
+        leading=9,
+    )
+
     data = [["Data/Hora (local)", "Visitas", "Título", "URL"]]
     for _, r in df.iterrows():
         data.append([
-            r.get("datetime_local", ""),
+            Paragraph(r.get("datetime_local", ""), style),
             str(r.get("visits", "")),
-            (r.get("title") or "")[:100],
-            (r.get("url") or "")[:140],
+            Paragraph((r.get("title") or "")[:120], style),
+            Paragraph((r.get("url") or ""), style),
         ])
 
-    tbl = Table(data, colWidths=[150, 60, 320, 390])
+    tbl = Table(data, colWidths=[100, 40, 200, 400])  # mais espaço pra URL
     tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e5e5e5")),
         ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
@@ -195,12 +202,11 @@ def build_excel(df: pd.DataFrame) -> bytes:
 # =========================
 st.markdown(
     """
-    <h2>🗂️ ExportaHist Local</h2>
+    <h2>🗂️ Exportar Histórico</h2>
     <p style="margin-top:-8px">
-      <b>Como usar (bem simples):</b><br>
-      1) <b>Feche o Google Chrome</b>;<br>
-      2) Escolha a(s) <b>data(s)</b> do histórico;<br>
-      3) Clique em <b>Exportar</b> para gerar <b>PDF</b> ou <b>Excel</b>.
+      <b>Como usar:</b><br>
+      1) Escolha a(s) <b>data(s)</b> do histórico;<br>
+      2) Clique em <b>Exportar</b> para gerar <b>PDF</b> ou <b>Excel</b>.
     </p>
     <small>Nada é enviado ou salvo em servidor. Tudo roda localmente nesta sessão.</small>
     """,
@@ -285,3 +291,46 @@ if run:
     except Exception as e:
         st.error("Ocorreu um erro inesperado.")
         st.exception(e)
+
+# --- padding extra para não ficar nada escondido atrás do rodapé ---
+st.markdown("<div style='height:70px'></div>", unsafe_allow_html=True)
+
+# --- rodapé fixo ---
+st.markdown(
+    """
+    <style>
+      ._footer {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        width: 100%;
+        padding: 8px 12px;
+        text-align: center;
+        font-size: 12px;
+        z-index: 1000;
+        backdrop-filter: blur(6px);
+      }
+      /* tema claro */
+      @media (prefers-color-scheme: light) {
+        ._footer {
+          background: rgba(255,255,255,0.85);
+          color: #333;
+          border-top: 1px solid rgba(0,0,0,0.08);
+        }
+      }
+      /* tema escuro */
+      @media (prefers-color-scheme: dark) {
+        ._footer {
+          background: rgba(24,24,24,0.75);
+          color: #ddd;
+          border-top: 1px solid rgba(255,255,255,0.08);
+        }
+      }
+      ._footer a { color: inherit; text-decoration: underline; }
+    </style>
+    <div class="_footer">
+      Desenvolvido por <b>Harlley Hauradou</b> — <a href="https://github.com/HarlleyHauradou/Salva_historico" target="_blank">GitHub</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
